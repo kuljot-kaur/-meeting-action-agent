@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting-to-Action Agent</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --panel: #171a21;
+            --panel-border: #262b36;
+            --accent: #5b8cff;
+            --accent-soft: #5b8cff22;
+            --text: #e8eaf0;
+            --text-dim: #8b909c;
+            --good: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 32px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 4px;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            margin: 0 0 28px;
+            font-size: 14px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            font-size: 15px;
+            margin: 0 0 14px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            background: #0d0f14;
+            color: var(--text);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        select,
+        button {
+            background: #0d0f14;
+            color: var(--text);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        label.checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .steps {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-dim);
+            opacity: 0.4;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            opacity: 1;
+            color: var(--text);
+        }
+
+        .step.done {
+            opacity: 1;
+            color: var(--good);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+            flex-shrink: 0;
+        }
+
+        .step.active .dot {
+            background: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+
+        .step.done .dot {
+            background: var(--good);
+        }
+
+        .result {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .item {
+            background: #0d0f14;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .item strong {
+            color: var(--text);
+        }
+
+        .item .owner {
+            color: var(--accent);
+        }
+
+        .links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .history-item {
+            border-bottom: 1px solid var(--panel-border);
+            padding: 12px 0;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item .title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .history-item .meta {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .stat {
+            background: #0d0f14;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat .num {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat .lbl {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🤖 Meeting-to-Action Agent</h1>
+    <p class="subtitle">Transcript → Gemini extraction → real Tasks, Calendar events & recap Docs</p>
+
+    <div class="layout">
+
+        <div class="panel">
+            <h2>Run the pipeline</h2>
+            <div class="row" style="margin-bottom:10px">
+                <select id="inputMode" onchange="switchInputMode()">
+                    <option value="paste">Paste transcript text</option>
+                    <option value="file">Upload .txt file</option>
+                    <option value="docid">Google Doc ID</option>
+                </select>
+            </div>
+
+            <textarea id="transcript" placeholder="Paste a meeting transcript here...">Sarah: Okay let's start. Landing page mockups are done, Mike will share the Figma link today. Priya, can you get dev started Monday?
+Priya: Yep, on it.
+Sarah: Email campaign copy still needs one more legal review — Priya can you chase that today?
+Priya: Will do.
+Sarah: Budget review with finance got moved to Thursday July 9th at 2pm, Mike you're presenting ad spend.
+Mike: Got it, deck ready by Wednesday.</textarea>
+
+            <input type="file" id="fileInput" accept=".txt" style="display:none; margin-top:10px; color:#8b909c;">
+            <input type="text" id="docIdInput" placeholder="Paste Google Doc ID (from the URL)"
+                style="display:none; width:100%; margin-top:10px; background:#0d0f14; color:#e8eaf0; border:1px solid #262b36; border-radius:8px; padding:10px;">
+            <div class="row">
+                <label class="checkbox"><input type="checkbox" id="dryRun" checked> Dry run (don't create real
+                    Tasks/Calendar/Docs)</label>
+            </div>
+            <div class="row">
+                <button class="primary" onclick="runPipeline()">▶ Process Meeting</button>
+            </div>
+
+            <div class="steps" id="steps">
+                <div class="step" id="step-1">
+                    <div class="dot"></div> Fetching transcript
+                </div>
+                <div class="step" id="step-2">
+                    <div class="dot"></div> Extracting with Gemini
+                </div>
+                <div class="step" id="step-3">
+                    <div class="dot"></div> Creating Tasks & Calendar events
+                </div>
+                <div class="step" id="step-4">
+                    <div class="dot"></div> Generating recap doc
+                </div>
+            </div>
+
+            <div class="result" id="result">
+                <span class="badge" id="badge"></span>
+                <div id="decisions"></div>
+                <div id="actionItems"></div>
+                <div class="links" id="links"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>History</h2>
+            <div class="stats" id="stats"></div>
+            <div id="historyList"></div>
+        </div>
+
+    </div>
+
+    <script>
+        async function loadHistory() {
+            const res = await fetch('/api/history');
+            const history = await res.json();
+
+            const totalMeetings = history.length;
+            const totalActions = history.reduce((sum, h) => sum + (h.action_items_count || 0), 0);
+            const totalTasks = history.reduce((sum, h) => sum + (h.tasks_created || 0), 0);
+
+            document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${totalMeetings}</div><div class="lbl">Meetings</div></div>
+    <div class="stat"><div class="num">${totalActions}</div><div class="lbl">Action Items</div></div>
+    <div class="stat"><div class="num">${totalTasks}</div><div class="lbl">Tasks Created</div></div>
+  `;
+
+            document.getElementById('historyList').innerHTML = history.map((h, idx) => `
+    <div class="history-item">
+      <div class="title" onclick="toggleDetail(${idx})" style="cursor:pointer">
+        ${h.meeting_title} <span style="color:#5b8cff;font-size:11px">▾ details</span>
+      </div>
+      <div class="meta">
+        ${new Date(h.timestamp).toLocaleString()} ·
+        ${h.action_items_count} action items ·
+        ${h.dry_run ? 'dry run' : `${h.tasks_created} tasks, ${h.events_created} events`}
+        ${h.recap_url ? ` · <a href="${h.recap_url}" target="_blank" style="color:#5b8cff">recap doc</a>` : ''}
+      </div>
+      <div id="detail-${idx}" style="display:none;margin-top:10px">
+        ${h.extraction.decisions.length ? `<p style="font-size:12px;color:#8b909c">${h.extraction.decisions.join(' · ')}</p>` : ''}
+        ${h.extraction.action_items.map(i => `
+          <div class="item"><strong>${i.task}</strong><br><span class="owner">${i.owner}</span>${i.deadline ? ' · due ' + i.deadline : ''}</div>
+        `).join('')}
+        ${h.extraction.future_meetings && h.extraction.future_meetings.length ? h.extraction.future_meetings.map(m => `
+          <div class="item">📅 <strong>${m.title}</strong><br>${m.date} at ${m.time}</div>
+        `).join('') : ''}
+      </div>
+    </div>
+  `).join('') || '<p style="color:#8b909c;font-size:13px">No meetings processed yet.</p>';
+        }
+
+        function toggleDetail(idx) {
+            const el = document.getElementById(`detail-${idx}`);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function setStep(n, state) {
+            const el = document.getElementById(`step-${n}`);
+            el.classList.remove('active', 'done');
+            if (state) el.classList.add(state);
+        }
+
+        function switchInputMode() {
+            const mode = document.getElementById('inputMode').value;
+            document.getElementById('transcript').style.display = mode === 'paste' ? 'block' : 'none';
+            document.getElementById('fileInput').style.display = mode === 'file' ? 'block' : 'none';
+            document.getElementById('docIdInput').style.display = mode === 'docid' ? 'block' : 'none';
+        }
+
+        async function getTranscriptPayload() {
+            const mode = document.getElementById('inputMode').value;
+            if (mode === 'paste') {
+                return { transcript: document.getElementById('transcript').value };
+            } else if (mode === 'file') {
+                const file = document.getElementById('fileInput').files[0];
+                if (!file) { alert('Please choose a file'); return null; }
+                const text = await file.text();
+                return { transcript: text };
+            } else if (mode === 'docid') {
+                const docId = document.getElementById('docIdInput').value.trim();
+                if (!docId) { alert('Please enter a Google Doc ID'); return null; }
+                return { doc_id: docId };
+            }
+        }
+
+        async function runPipeline() {
+            const payload = await getTranscriptPayload();
+            if (!payload) return;
+            const dryRun = document.getElementById('dryRun').checked;
+            document.getElementById('result').classList.remove('show');
+
+            setStep(1, 'active');
+            await new Promise(r => setTimeout(r, 500));
+            setStep(1, 'done'); setStep(2, 'active');
+
+            const res = await fetch('/api/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...payload, dry_run: dryRun })
+            });
+            const data = await res.json();
+
+            setStep(2, 'done'); setStep(3, dryRun ? 'done' : 'active');
+            await new Promise(r => setTimeout(r, dryRun ? 100 : 600));
+            setStep(3, 'done'); setStep(4, dryRun ? 'done' : 'active');
+            await new Promise(r => setTimeout(r, dryRun ? 100 : 400));
+            setStep(4, 'done');
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+
+            document.getElementById('badge').textContent = data.dry_run ? 'DRY RUN' : 'LIVE — real Tasks/Calendar/Doc created';
+            document.getElementById('decisions').innerHTML = `<strong>${data.extraction.meeting_title || 'Untitled meeting'}</strong>` +
+                (data.extraction.decisions.length ? '<p style="font-size:13px;color:#8b909c;margin:8px 0">' + data.extraction.decisions.join(' · ') + '</p>' : '');
+            document.getElementById('actionItems').innerHTML = data.extraction.action_items.map(i => `
+    <div class="item"><strong>${i.task}</strong><br><span class="owner">${i.owner}</span>${i.deadline ? ' · due ' + i.deadline : ''}</div>
+  `).join('');
+            document.getElementById('links').innerHTML = data.recap_url ? `<a href="${data.recap_url}" target="_blank">Open recap doc →</a>` : '';
+            document.getElementById('result').classList.add('show');
+
+            loadHistory();
+        }
+
+        loadHistory();
+    </script>
+</body>
+
+</html>
